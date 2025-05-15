@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout - FlipKart</title>
+  <style>
+    /* Base styles */
+    body {
+      font-family: 'Segoe UI', sans-serif;
+	  background: linear-gradient(135deg, lightcyan, white , lightcyan);
+      background-color: #121212; /* Dark theme background */
+      color: #f1f5f8; /* Light text for dark background */
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Container for the checkout page */
+    .container {
+		align:center;
+      max-width: 450px;
+      margin: 40px auto;
+	  margin-top:100px;
+      padding: 40px;
+      background-color: #1e1e1e; /* Dark background for container */
+      border-radius: 20px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: #ffffff;
+      margin-bottom: 30px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    /* Cart summary section */
+    .cart-summary {
+      margin-top: 20px;
+      font-size: 1.2rem;
+    }
+
+    .cart-item {
+      margin-bottom: 10px;
+      color: #f1f5f8;
+    }
+
+    /* Total section */
+    .total-amount {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-top: 30px;
+      color: #00bcd4; /* Cyan color for the total */
+    }
+
+	textarea {
+	    margin-top: 10px;
+	    width: 100%;
+	    padding: 10px;
+	    border-radius: 10px;
+	    border: none;
+	    font-size: 1rem;
+	    resize: vertical;
+	  }
+	  
+    /* Checkout button */
+    .checkout-btn {
+      display: inline-block;
+      padding: 15px 40px;
+      background-color: orange; /* Cyan color for button */
+      color: black;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+      margin-top: 30px;
+    }
+
+    .checkout-btn:hover {
+      background-color: orange; /* Darker cyan on hover */
+      box-shadow: 0 4px 20px rgba(0, 188, 212, 0.5);
+    transform: scale(1.05);
+	}
+
+    .checkout-btn:focus {
+      outline: none;
+    }
+	
+	label {
+	      font-size: 1.1rem;
+	      display: block;
+	      margin-top: 30px;
+	      margin-bottom: 10px;
+	      color: #f1f5f8;
+	    }
+		
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Checkout Summary</h2>
+    <div id="cart-summary" class="cart-summary"></div>
+    <div id="total-amount" class="total-amount"></div>
+	
+	<!-- Address textarea -->
+	    <label for="userAddress">Enter Your Address:</label>
+	    <textarea id="userAddress" rows="4" placeholder="Type your delivery address here..." required></textarea>
+		
+    <button id="placeOrderBtn" class="checkout-btn">Place Order</button>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const userId = localStorage.getItem("userId");
+      const userEmail = localStorage.getItem("userEmail");
+      const cartItems = JSON.parse(localStorage.getItem("cartItems"));
+      const totalAmount = parseFloat(localStorage.getItem("totalAmount"));
+
+      console.log("userId:", userId);
+      console.log("userEmail:", userEmail);
+
+      if (!userId || !userEmail || !cartItems || isNaN(totalAmount)) {
+        alert("Missing user or cart details. Please login again.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Display cart details
+      let cartSummary = "<ul>";
+      cartItems.forEach(item => {
+        const product = item.product;
+        cartSummary += `
+          <li class="cart-item">${product.name} - ₹${product.price} x ${item.quantity} = ₹${product.price * item.quantity}</li>
+        `;
+      });
+      cartSummary += "</ul>";
+      document.getElementById("cart-summary").innerHTML = cartSummary;
+
+      document.getElementById("total-amount").textContent = `Total Amount: ₹${totalAmount}`;
+
+	  
+	  
+	  
+      // Place order
+      document.getElementById("placeOrderBtn").addEventListener("click", function () {
+        
+		
+		const userAddress = document.getElementById("userAddress").value.trim();
+		if (!userAddress) {
+		  alert("Please enter your address.");
+		  return;
+		}
+
+		const orderData = {
+		  userId: userId,
+		  userEmail: userEmail,
+		  cartItemIds: cartItems.map(item => item.id),
+		  totalAmount: totalAmount,
+		  address: userAddress
+		};
+
+
+		
+		
+		
+        fetch("/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(orderData)
+        })
+        .then(res => res.text())
+        .then(msg => {
+          alert(msg);
+
+          // Only remove cart-specific data, not user session
+          localStorage.removeItem("cartItems");
+          localStorage.removeItem("totalAmount");
+
+          window.location.href = "order-history.html";
+        })
+        .catch(err => {
+          console.error("Error placing order:", err);
+          alert("Error placing order.");
+        });
+      });
+    });
+  </script>
+</body>
+</html>

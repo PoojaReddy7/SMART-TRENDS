@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FlipKart - Cart</title>
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, lightcyan, white ,lightcyan);
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      margin-top: 100px;
+      padding: 30px;
+      background-color: white;
+      border-radius: 15px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: black;
+      margin-bottom: 30px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    /* Cart Item Styles */
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-radius: 10px;
+      background-color: lightgrey;
+      margin-bottom: 15px;
+      transition: transform 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .cart-item:hover {
+      transform: translateY(-5px);
+    }
+
+    .cart-item-details {
+      flex-grow: 1;
+      text-align: left;
+    }
+
+    .cart-item h4 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: #007bff;
+      font-weight: 500;
+    }
+
+    .cart-item p {
+      margin: 4px 0;
+      font-size: 0.9rem;
+      color: #444;
+    }
+
+    .cart-item-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .cart-item-actions p {
+      margin-right: 15px;
+      font-size: 1rem;
+      font-weight: bold;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      background-color: #c82333;
+    }
+
+    /* Total Amount and Checkout Button Styles */
+    .total {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-top: 30px;
+      color: black;
+      text-align: right;
+    }
+
+    .checkout-btn {
+      display: inline-block;
+      padding: 12px 30px;
+      background-color: orange;
+      color: black;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+
+    .checkout-btn:hover {
+      background-color: #e0a800;
+      transform: scale(1.05);
+    }
+
+    .checkout-btn:focus {
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>My Cart</h2>
+    <div id="cart-items"></div>
+    <div class="total" id="total-amount">Total: ₹0</div>
+    <button class="checkout-btn" id="checkoutBtn">Proceed to Checkout</button>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get("userId") || localStorage.getItem("userId");
+      const userEmail = localStorage.getItem("userEmail");
+
+      if (!userId) {
+        alert("User ID not found.");
+        return;
+      }
+
+      // Fetch the cart items from the backend
+      fetch(`/api/cart/${userId}`)
+        .then(response => response.json())
+        .then(cartItems => {
+          const cartContainer = document.getElementById("cart-items");
+          let total = 0;
+          cartContainer.innerHTML = '';
+
+          // Render each item in the cart
+          cartItems.forEach(item => {
+            const product = item.product;
+            const quantity = item.quantity;
+            const subtotal = product.price * quantity;
+            total += subtotal;
+
+            const cartItemDiv = document.createElement("div");
+            cartItemDiv.className = "cart-item";
+            cartItemDiv.innerHTML = `
+              <div class="cart-item-details">
+                <h4>${product.name}</h4>
+                <p>Price: ₹${product.price}</p>
+                <p>Quantity: ${quantity}</p>
+              </div>
+              <div class="cart-item-actions">
+                <p><strong>Subtotal:</strong> ₹${subtotal}</p>
+                <button class="delete-btn" data-user-id="${userId}" data-product-id="${product.id}">Delete</button>
+              </div>
+            `;
+
+            cartContainer.appendChild(cartItemDiv);
+          });
+
+          // Update total amount
+          document.getElementById("total-amount").textContent = `Total: ₹${total}`;
+
+          // Store the userId and cart items in localStorage
+          localStorage.setItem("userId", userId);
+          localStorage.setItem("cartItems", JSON.stringify(cartItems));
+          localStorage.setItem("totalAmount", total.toFixed(2));
+
+          // Set up event listeners for delete buttons
+          document.querySelectorAll(".delete-btn").forEach(button => {
+            button.addEventListener("click", function () {
+              const userId = this.dataset.userId;
+              const productId = this.dataset.productId;
+              deleteCartItem(userId, productId);
+            });
+          });
+        })
+        .catch(error => {
+          console.error("Error loading cart items:", error);
+          alert("Failed to load cart items.");
+        });
+
+      // Checkout button action
+      document.getElementById("checkoutBtn").addEventListener("click", function () {
+        window.location.href = "checkout.html";
+      });
+    });
+
+    // Function to handle cart item deletion
+    function deleteCartItem(userId, productId) {
+      fetch(`/api/cart/delete`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: userId, productId: productId }),
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => { throw new Error(text); });
+        }
+        return response.text();
+      })
+      .then(message => {
+        console.log("Item deleted:", message);
+        window.location.reload();
+      })
+      .catch(error => {
+        console.error("Error deleting item:", error);
+        alert("Could not delete the item.");
+      });
+    }
+  </script>
+</body>
+</html>
